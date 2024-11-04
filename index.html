@@ -1,0 +1,464 @@
+<html><head><base href="." />
+  <meta charset="UTF-8">
+  <title>隨機抽籤程式</title>
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(45deg, #f3f4f6 0%, #ddd6f3 100%);
+      animation: gradientBG 15s ease infinite;
+      background-size: 200% 200%;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2.5rem;
+      border-radius: 20px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255,255,255,0.3);
+      transition: transform 0.3s ease;
+    }
+    
+    .container:hover {
+      transform: translateY(-5px);
+    }
+    
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 1.5rem;
+      font-size: 2.2rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    textarea {
+      width: 100%;
+      height: 150px;
+      margin: 1rem 0;
+      padding: 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      resize: vertical;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    textarea:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+      outline: none;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2.5rem;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(52,152,219,0.3);
+    }
+    
+    button:hover {
+      background: linear-gradient(135deg, #2980b9 0%, #2475a7 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(52,152,219,0.4);
+    }
+    
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    .result {
+      margin-top: 1.5rem;
+      padding: 1.2rem;
+      border: 2px solid #3498db;
+      border-radius: 12px;
+      font-size: 1.3rem;
+      animation: fadeIn 0.5s ease-out;
+      background: rgba(52,152,219,0.1);
+      box-shadow: 0 5px 15px rgba(52,152,219,0.1);
+    }
+
+    .rolling {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 1rem;
+      height: 70px;
+      font-size: 1.6rem;
+      color: #2c3e50;
+      font-weight: 600;
+    }
+
+    .verification {
+      margin-top: 1.2rem;
+      font-size: 0.9rem;
+      color: #666;
+      background: rgba(0,0,0,0.03);
+      padding: 1rem;
+      border-radius: 8px;
+      line-height: 1.6;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .toolbar button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
+
+    .history-panel {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .history-item {
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .timer {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      color: #2c3e50;
+    }
+
+    .weight-input {
+      width: 60px;
+      padding: 4px;
+      margin-left: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .weight-label {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+
+    #weightSettings {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-15px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+
+    @keyframes roll {
+      0% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-25px) scale(1.1); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎲 隨機抽籤程式</h1>
+    <textarea id="options" placeholder="請輸入選項，每行一個...
+例如:
+選項1
+選項2
+選項3"></textarea>
+    <div class="toolbar">
+      <button onclick="draw()" id="drawButton">抽籤</button>
+      <button onclick="toggleTimer()" id="timerButton">定時抽籤</button>
+      <button onclick="toggleWeights()" id="weightButton">權重設定</button>
+      <button onclick="toggleHistory()" id="historyButton">歷史紀錄</button>
+      <button onclick="saveOptions()">儲存選項</button>
+      <button onclick="loadOptions()">載入選項</button>
+    </div>
+    <div id="timer" class="timer" style="display: none;">
+      <span>倒數：<span id="countdown">0</span> 秒</span>
+    </div>
+    <div id="weightSettings"></div>
+    <div id="rolling" class="rolling" style="display: none;"></div>
+    <div id="result" class="result" style="display: none;"></div>
+    <div id="verification" class="verification" style="display: none;"></div>
+    <div id="history" class="history-panel"></div>
+  </div>
+
+  <script>
+    let drawHistory = [];
+    let timerInterval = null;
+    let weights = {};
+    let entropyPool = [];
+    let isCollectingEntropy = false;
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function collectEntropy(event) {
+      if (isCollectingEntropy) {
+        entropyPool.push(event.clientX, event.clientY, event.timeStamp);
+      }
+    }
+
+    function startEntropyCollection() {
+      entropyPool = [];
+      isCollectingEntropy = true;
+      document.addEventListener('mousemove', collectEntropy);
+      return new Promise(resolve => setTimeout(() => {
+        isCollectingEntropy = false;
+        document.removeEventListener('mousemove', collectEntropy);
+        resolve();
+      }, 1000));
+    }
+
+    function fisherYatesShuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(getCryptoRandom() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function getCryptoRandom() {
+      return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+    }
+
+    function calculateEntropy(data) {
+      const frequencies = {};
+      data.forEach(value => {
+        frequencies[value] = (frequencies[value] || 0) + 1;
+      });
+      return -Object.values(frequencies).reduce((sum, freq) => {
+        const p = freq / data.length;
+        return sum + p * Math.log2(p);
+      }, 0);
+    }
+
+    function toggleHistory() {
+      const history = document.getElementById('history');
+      history.style.display = history.style.display === 'none' ? 'block' : 'none';
+      if (history.style.display === 'block') {
+        updateHistoryDisplay();
+      }
+    }
+
+    function updateHistoryDisplay() {
+      const history = document.getElementById('history');
+      history.innerHTML = drawHistory.map((item, index) => `
+        <div class="history-item">
+          <span>${new Date(item.timestamp).toLocaleString()} - ${item.result}</span>
+          <button onclick="removeHistoryItem(${index})">删除</button>
+        </div>
+      `).join('');
+    }
+
+    function removeHistoryItem(index) {
+      drawHistory.splice(index, 1);
+      updateHistoryDisplay();
+    }
+
+    function toggleTimer() {
+      const timer = document.getElementById('timer');
+      if (timer.style.display === 'none') {
+        timer.style.display = 'block';
+        startCountdown();
+      } else {
+        timer.style.display = 'none';
+        clearInterval(timerInterval);
+      }
+    }
+
+    function startCountdown() {
+      let count = 5;
+      document.getElementById('countdown').textContent = count;
+      
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        count--;
+        document.getElementById('countdown').textContent = count;
+        if (count <= 0) {
+          draw();
+          count = 5;
+        }
+      }, 1000);
+    }
+
+    function toggleWeights() {
+      const weightSettings = document.getElementById('weightSettings');
+      if (weightSettings.style.display === 'none') {
+        weightSettings.style.display = 'block';
+        updateWeightSettings();
+      } else {
+        weightSettings.style.display = 'none';
+      }
+    }
+
+    function updateWeightSettings() {
+      const options = document.getElementById('options').value.split('\n').filter(option => option.trim() !== '');
+      const weightSettings = document.getElementById('weightSettings');
+      
+      weightSettings.innerHTML = options.map(option => `
+        <label class="weight-label">
+          ${option}
+          <input type="number" class="weight-input" value="${weights[option] || 1}" 
+                 onchange="updateWeight('${option}', this.value)" min="0" step="0.1">
+        </label>
+      `).join('');
+    }
+
+    function updateWeight(option, value) {
+      weights[option] = parseFloat(value);
+    }
+
+    function saveOptions() {
+      const options = document.getElementById('options').value;
+      localStorage.setItem('savedOptions', options);
+      alert('選項已儲存！');
+    }
+
+    function loadOptions() {
+      const savedOptions = localStorage.getItem('savedOptions');
+      if (savedOptions) {
+        document.getElementById('options').value = savedOptions;
+        alert('選項已載入！');
+      } else {
+        alert('沒有找到儲存的選項！');
+      }
+    }
+
+    async function draw() {
+      const textarea = document.getElementById('options');
+      const result = document.getElementById('result');
+      const rolling = document.getElementById('rolling');
+      const verification = document.getElementById('verification');
+      const drawButton = document.getElementById('drawButton');
+      const options = textarea.value.split('\n').filter(option => option.trim() !== '');
+      
+      if (options.length === 0) {
+        alert('請先輸入選項！');
+        return;
+      }
+
+      drawButton.disabled = true;
+      rolling.textContent = "收集隨機熵值中...";
+      rolling.style.display = 'flex';
+      result.style.display = 'none';
+      verification.style.display = 'none';
+
+      // Collect entropy from mouse movements
+      await startEntropyCollection();
+
+      // Visual rolling animation
+      for (let i = 0; i < 20; i++) {
+        const tempOption = options[Math.floor(getCryptoRandom() * options.length)];
+        rolling.textContent = tempOption;
+        rolling.style.animation = 'roll 0.2s ease-out';
+        await sleep(100);
+        rolling.style.animation = 'none';
+      }
+
+      const timestamp = new Date().getTime();
+      const cryptoRandom = getCryptoRandom();
+      const entropyValue = calculateEntropy(entropyPool);
+      
+      // Combine multiple entropy sources
+      const combinedSeed = timestamp ^ 
+                          (cryptoRandom * 1000000) ^ 
+                          (entropyValue * 1000000);
+      
+      // Use weighted selection with Fisher-Yates shuffle
+      let weightedOptions = [];
+      options.forEach(option => {
+        const weight = weights[option] || 1;
+        for (let i = 0; i < weight; i++) {
+          weightedOptions.push(option);
+        }
+      });
+      
+      weightedOptions = fisherYatesShuffle(weightedOptions);
+      const selectedOption = weightedOptions[Math.floor(getCryptoRandom() * weightedOptions.length)];
+      
+      rolling.style.display = 'none';
+      result.style.display = 'block';
+      verification.style.display = 'block';
+      
+      result.classList.add('shake');
+      result.textContent = `🎉 抽中了：${selectedOption}`;
+      
+      verification.innerHTML = `
+        抽籤驗證資訊：<br>
+        時間戳記：${timestamp}<br>
+        加密隨機值：${cryptoRandom.toFixed(10)}<br>
+        熵值：${entropyValue.toFixed(4)} bits<br>
+        混合種子：${combinedSeed}<br>
+        選項數量：${options.length}<br>
+        收集到的熵樣本數：${entropyPool.length}
+      `;
+      
+      drawHistory.push({
+        timestamp: timestamp,
+        result: selectedOption,
+        entropy: entropyValue
+      });
+      updateHistoryDisplay();
+
+      setTimeout(() => {
+        result.classList.remove('shake');
+        drawButton.disabled = false;
+      }, 500);
+    }
+    
+    document.getElementById('options').value = '吃麥當勞\n吃肯德基\n吃摩斯漢堡\n吃素食\n吃牛排';
+  </script>
+</body></html>
