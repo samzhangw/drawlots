@@ -178,6 +178,30 @@
       border-radius: 12px;
     }
 
+    #numberRangeInputs {
+      display: none;
+      margin: 1rem 0;
+    }
+
+    #numberRangeInputs input {
+      padding: 0.5rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    #numberRangeInputs input:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+      outline: none;
+    }
+
+    #numberRangeInputs span {
+      font-size: 1.2rem;
+      color: #2c3e50;
+    }
+
     .toggle-active {
       background: linear-gradient(135deg, #27ae60 0%, #219a52 100%) !important;
     }
@@ -220,6 +244,11 @@
 選項1
 選項2
 選項3"></textarea>
+    <div id="numberRangeInputs" style="display: none; margin: 1rem 0;">
+      <input type="number" id="minNumber" placeholder="最小值" style="width: 100px; margin-right: 10px;">
+      <span>到</span>
+      <input type="number" id="maxNumber" placeholder="最大值" style="width: 100px; margin-left: 10px;">
+    </div>
     <div class="toolbar">
       <button onclick="draw()" id="drawButton">抽籤</button>
       <button onclick="toggleTimer()" id="timerButton">定時抽籤</button>
@@ -228,6 +257,7 @@
       <button onclick="saveOptions()">儲存選項</button>
       <button onclick="loadOptions()">載入選項</button>
       <button onclick="toggleRepeatMode()" id="repeatButton">允許重複</button>
+      <button onclick="toggleNumberMode()" id="numberModeButton">數字範圍模式</button>
     </div>
     <div id="timer" class="timer" style="display: none;">
       <span>倒數：<span id="countdown">0</span> 秒</span>
@@ -247,6 +277,7 @@
     let isCollectingEntropy = false;
     let allowRepeats = true;
     let drawnItems = new Set();
+    let isNumberMode = false;
 
     function sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
@@ -420,13 +451,42 @@
       }
     }
 
+    function toggleNumberMode() {
+      isNumberMode = !isNumberMode;
+      const numberModeButton = document.getElementById('numberModeButton');
+      const numberRangeInputs = document.getElementById('numberRangeInputs');
+      const optionsTextarea = document.getElementById('options');
+      
+      numberModeButton.classList.toggle('toggle-active');
+      numberRangeInputs.style.display = isNumberMode ? 'block' : 'none';
+      optionsTextarea.style.display = isNumberMode ? 'none' : 'block';
+    }
+
     async function draw() {
       const textarea = document.getElementById('options');
       const result = document.getElementById('result');
       const rolling = document.getElementById('rolling');
       const verification = document.getElementById('verification');
       const drawButton = document.getElementById('drawButton');
-      const options = textarea.value.split('\n').filter(option => option.trim() !== '');
+      
+      let options = [];
+
+      if (isNumberMode) {
+        const min = parseInt(document.getElementById('minNumber').value);
+        const max = parseInt(document.getElementById('maxNumber').value);
+        
+        if (isNaN(min) || isNaN(max) || min >= max) {
+          alert('請輸入有效的數字範圍！');
+          return;
+        }
+        
+        for (let i = min; i <= max; i++) {
+          options.push(i.toString());
+        }
+        textarea.value = options.join('\n');
+      } else {
+        options = textarea.value.split('\n').filter(option => option.trim() !== '');
+      }
       
       if (options.length === 0) {
         alert('請先輸入選項！');
