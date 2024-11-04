@@ -177,6 +177,10 @@
       background: rgba(255, 255, 255, 0.9);
       border-radius: 12px;
     }
+
+    .toggle-active {
+      background: linear-gradient(135deg, #27ae60 0%, #219a52 100%) !important;
+    }
     
     @keyframes fadeIn {
       from {
@@ -223,6 +227,7 @@
       <button onclick="toggleHistory()" id="historyButton">歷史紀錄</button>
       <button onclick="saveOptions()">儲存選項</button>
       <button onclick="loadOptions()">載入選項</button>
+      <button onclick="toggleRepeatMode()" id="repeatButton">允許重複</button>
     </div>
     <div id="timer" class="timer" style="display: none;">
       <span>倒數：<span id="countdown">0</span> 秒</span>
@@ -240,6 +245,8 @@
     let weights = {};
     let entropyPool = [];
     let isCollectingEntropy = false;
+    let allowRepeats = true;
+    let drawnItems = new Set();
 
     function sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
@@ -268,6 +275,28 @@
         [array[i], array[j]] = [array[j], array[i]];
       }
       return array;
+    }
+
+    async function sha256(message) {
+      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(message))
+        .then(buffer => Array.from(new Uint8Array(buffer))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join(''));
+    }
+
+    function analyzeEntropyQuality(entropyPool) {
+      const mean = entropyPool.reduce((a, b) => a + b, 0) / entropyPool.length;
+      const variance = entropyPool.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / entropyPool.length;
+      const distribution = entropyPool.reduce((acc, val) => {
+        acc[Math.floor(val / 100)] = (acc[Math.floor(val / 100)] || 0) + 1;
+        return acc;
+      }, {});
+      
+      return {
+        mean: mean.toFixed(2),
+        variance: variance.toFixed(2),
+        distributionScore: Object.keys(distribution).length / 10
+      };
     }
 
     function getCryptoRandom() {
@@ -377,6 +406,20 @@
       }
     }
 
+    function toggleRepeatMode() {
+      allowRepeats = !allowRepeats;
+      const repeatButton = document.getElementById('repeatButton');
+      repeatButton.classList.toggle('toggle-active');
+      repeatButton.textContent = allowRepeats ? '允許重複' : '不允許重複';
+      
+      drawnItems.clear();
+      
+      const verification = document.getElementById('verification');
+      if (verification.style.display !== 'none') {
+        verification.innerHTML += `<br>重複模式：${allowRepeats ? '允許' : '不允許'}`;
+      }
+    }
+
     async function draw() {
       const textarea = document.getElementById('options');
       const result = document.getElementById('result');
@@ -396,10 +439,8 @@
       result.style.display = 'none';
       verification.style.display = 'none';
 
-      // Collect entropy from mouse movements
       await startEntropyCollection();
 
-      // Visual rolling animation
       for (let i = 0; i < 20; i++) {
         const tempOption = options[Math.floor(getCryptoRandom() * options.length)];
         rolling.textContent = tempOption;
@@ -408,16 +449,20 @@
         rolling.style.animation = 'none';
       }
 
+      const entropyQuality = analyzeEntropyQuality(entropyPool);
       const timestamp = new Date().getTime();
       const cryptoRandom = getCryptoRandom();
       const entropyValue = calculateEntropy(entropyPool);
       
-      // Combine multiple entropy sources
+      const seedData = `${timestamp}-${cryptoRandom}-${entropyValue}-${entropyPool.join(',')}`;
+      const seedHash = await sha256(seedData);
+      
+      const hashNumber = parseInt(seedHash.substring(0, 8), 16) / 0xffffffff;
       const combinedSeed = timestamp ^ 
                           (cryptoRandom * 1000000) ^ 
-                          (entropyValue * 1000000);
+                          (entropyValue * 1000000) ^
+                          (hashNumber * 1000000);
       
-      // Use weighted selection with Fisher-Yates shuffle
       let weightedOptions = [];
       options.forEach(option => {
         const weight = weights[option] || 1;
@@ -426,7 +471,18 @@
         }
       });
       
-      weightedOptions = fisherYatesShuffle(weightedOptions);
+      if (!allowRepeats) {
+        weightedOptions = weightedOptions.filter(option => !drawnItems.has(option));
+        
+        if (weightedOptions.length === 0) {
+          drawnItems.clear();
+          weightedOptions = options.map(option => {
+            const weight = weights[option] || 1;
+            return Array(weight).fill(option);
+          }).flat();
+        }
+      }
+
       const selectedOption = weightedOptions[Math.floor(getCryptoRandom() * weightedOptions.length)];
       
       rolling.style.display = 'none';
@@ -436,14 +492,25 @@
       result.classList.add('shake');
       result.textContent = `🎉 抽中了：${selectedOption}`;
       
+      if (!allowRepeats) {
+        drawnItems.add(selectedOption);
+      }
+      
       verification.innerHTML = `
         抽籤驗證資訊：<br>
+        種子雜湊：${seedHash}<br>
         時間戳記：${timestamp}<br>
         加密隨機值：${cryptoRandom.toFixed(10)}<br>
         熵值：${entropyValue.toFixed(4)} bits<br>
         混合種子：${combinedSeed}<br>
         選項數量：${options.length}<br>
-        收集到的熵樣本數：${entropyPool.length}
+        收集到的熵樣本數：${entropyPool.length}<br>
+        熵品質分析：<br>
+        - 平均值：${entropyQuality.mean}<br>
+        - 方差：${entropyQuality.variance}<br>
+        - 分布評分：${entropyQuality.distributionScore.toFixed(2)}/1.0<br>
+        重複模式：${allowRepeats ? '允許' : '不允許'}<br>
+        已抽取項目：${Array.from(drawnItems).join(', ')}
       `;
       
       drawHistory.push({
